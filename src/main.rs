@@ -76,7 +76,7 @@ impl ZellijPlugin for State {
             Event::ModeUpdate(mode) => {
                 // add pane to jump list when going into normal mode only
                 self.current_mode = mode.mode;
-
+        
                 // guard clauses
                 if mode.mode != InputMode::Normal || mode.mode == self.previous_mode {
                     self.previous_mode = mode.mode;
