@@ -1,0 +1,12 @@
+[package]
+name = "zellij-jump-list"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ansi_term = "0.12.0"
+zellij-tile = "0.38.2"
+chrono = "0.4.0"
+dialoguer = "0.11.0"
