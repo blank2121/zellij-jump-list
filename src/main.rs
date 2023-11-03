@@ -1,4 +1,5 @@
 use ansi_term::{Colour::Fixed, Style};
+use chrono::format::Fixed;
 use std::collections::BTreeMap;
 use zellij_tile::prelude::*;
 use std::cmp::{min, max};
@@ -12,7 +13,7 @@ struct CustomPane {
 
 impl std::fmt::Display for CustomPane {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} | {}", self.name, self.id)
+        write!(f, "{}", self.name)
     }
 }
 
@@ -45,6 +46,7 @@ impl State {
         }
         None
     }
+
     fn is_previous_jump(&self) -> bool {
         if self.jump_list.get(0).is_none() {
             false
@@ -72,12 +74,14 @@ impl ZellijPlugin for State {
 
     fn update(&mut self, event: Event) -> bool {
         let mut should_render = false;
+
         match event {
             Event::ModeUpdate(mode) => {
-                // add pane to jump list when going into normal mode only
+                // to fix issue where refocussing from plugin doesn't add pane
+                // to list
+
                 self.current_mode = mode.mode;
         
-                // guard clauses
                 if mode.mode != InputMode::Normal || mode.mode == self.previous_mode {
                     self.previous_mode = mode.mode;
                     return true;
@@ -89,6 +93,7 @@ impl ZellijPlugin for State {
                     return true;
                 }
 
+                // updating self.jump_list & self.previous_mode
                 let mut temp: Vec<CustomPane> = vec![self.current_focus.clone()];
                 temp.extend(self.jump_list.clone());
 
@@ -106,15 +111,17 @@ impl ZellijPlugin for State {
                     hide_self();
                 }
                 if key == Key::Char('\n') {
+                    // select and hide in jump list
+
                     let index_for_pane = (self.select_focus - 1) as usize;
                     let to_focus: u32 = self.jump_list[index_for_pane].id;
                     focus_terminal_pane(to_focus, true);
                     hide_self();
                 }
-                if key == Key::Char('k') {
+                if key == Key::Char('k') || key == Key::Up {
                     self.select_focus = max(1, self.select_focus-1);
                 }
-                if key == Key::Char('j') {
+                if key == Key::Char('j') || key == Key::Down {
                     self.select_focus = min(10, self.select_focus+1); 
                 }
 
@@ -122,7 +129,6 @@ impl ZellijPlugin for State {
             }
 
             Event::PaneUpdate(pane_info) => {
-                // setting current focus and adding to jump list
                 self.current_focus = self.current_pane(pane_info).unwrap();
 
                 // guard clauses
@@ -130,6 +136,7 @@ impl ZellijPlugin for State {
                 if self.is_previous_jump() {return true;}
                 if self.current_mode != InputMode::Normal {return true;}
 
+                // temp will be the updated jump list
                 let mut temp: Vec<CustomPane> = vec![self.current_focus.clone()];
                 temp.extend(self.jump_list.clone());
 
@@ -152,12 +159,8 @@ impl ZellijPlugin for State {
         should_render
     }
     fn render(&mut self, _rows: usize, _cols: usize) {
-        // let colored_rows = color_bold(CYAN, &rows.to_string());
-        // let colored_cols = color_bold(CYAN, &cols.to_string());
-        println!(
-            "current mode: {:?} | prev mode: {:?}",
-            self.current_mode, self.previous_mode
-        );
+        println!("{}", Style::new().fg(Fixed(GREEN)).bold().paint("Jump List"));
+
         self.jump_list.iter().for_each(|x| {
             if x != &self.jump_list[(self.select_focus-1) as usize] {
                 println!("{}", x)
