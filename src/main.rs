@@ -1,6 +1,5 @@
 use ansi_term::{Colour::Fixed, Style};
-use chrono::format::Fixed;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use zellij_tile::prelude::*;
 use std::cmp::{min, max};
 
@@ -25,10 +24,11 @@ struct State {
     previous_mode: InputMode,
     jump_list: Vec<CustomPane>,
     select_focus: i32,
+    debug: String,
 }
 
 impl State {
-    fn current_pane(&self, zellij_instance: PaneManifest) -> Option<CustomPane> {
+    fn current_pane(&self, zellij_instance: &PaneManifest) -> Option<CustomPane> {
         let tabs: Vec<&usize> = zellij_instance.panes.keys().collect::<Vec<&usize>>();
 
         for t in tabs.iter() {
@@ -45,6 +45,36 @@ impl State {
             }
         }
         None
+    }
+
+    // supposed to remove panes that no longer exist
+    // but there is not way to do that yet with 0.38.0 zellij
+    // --------------- TODO ---------------
+    fn purge(&mut self, zellij_instance: PaneManifest) {
+        let mut existing_ids: HashSet<PaneInfo> = HashSet::new();
+
+        // getting list of all pane ids that exist
+        let tabs: Vec<&usize> = zellij_instance.panes.keys().collect::<Vec<&usize>>();
+
+        for t in tabs.iter() {
+            let panes_in_tab: &Vec<PaneInfo> = zellij_instance.panes.get(t).unwrap();
+
+            for p in panes_in_tab.iter() {
+                existing_ids.insert(p.clone());
+            }
+        }
+
+        // debug for detecting if pane is deleted
+        self.debug = format!("ids that exist: {:?} | status: {:?}", 
+                             existing_ids.iter().map(|x| x.id).collect::<Vec<u32>>(),
+                             existing_ids.iter().map(|x| x.exit_status).collect::<Vec<Option<i32>>>());
+
+        self.jump_list.retain(|x| {
+            existing_ids.iter()
+                .map(|a| a.id)
+                .collect::<Vec<u32>>()
+                .contains(&x.id)
+        });
     }
 
     fn is_previous_jump(&self) -> bool {
@@ -76,10 +106,9 @@ impl ZellijPlugin for State {
         let mut should_render = false;
 
         match event {
-            Event::ModeUpdate(mode) => {
-                // to fix issue where refocussing from plugin doesn't add pane
-                // to list
 
+            // when going to normal mode, it is added to the list
+            Event::ModeUpdate(mode) => {
                 self.current_mode = mode.mode;
         
                 if mode.mode != InputMode::Normal || mode.mode == self.previous_mode {
@@ -122,15 +151,14 @@ impl ZellijPlugin for State {
                     self.select_focus = max(1, self.select_focus-1);
                 }
                 if key == Key::Char('j') || key == Key::Down {
-                    self.select_focus = min(10, self.select_focus+1); 
+                    let ten_or_current = min(self.jump_list.len() as i32, 10);
+                    self.select_focus = min(self.select_focus+1, ten_or_current); 
                 }
 
                 should_render = true;
             }
-
             Event::PaneUpdate(pane_info) => {
-                self.current_focus = self.current_pane(pane_info).unwrap();
-
+                self.current_focus = self.current_pane(&pane_info).unwrap();
                 // guard clauses
                 if self.current_focus.is_plugin {return true;}
                 if self.is_previous_jump() {return true;}
@@ -151,6 +179,7 @@ impl ZellijPlugin for State {
                 }
 
                 self.jump_list = temp;
+                self.purge(pane_info);
                 should_render = true;
             }
             _ => (),
@@ -159,15 +188,17 @@ impl ZellijPlugin for State {
         should_render
     }
     fn render(&mut self, _rows: usize, _cols: usize) {
-        println!("{}", Style::new().fg(Fixed(GREEN)).bold().paint("Jump List"));
+        // tui title
+        println!("{}", Style::new().fg(Fixed(GREEN)).bold().paint("Jump List\n"));
 
-        self.jump_list.iter().for_each(|x| {
-            if x != &self.jump_list[(self.select_focus-1) as usize] {
+        // tui listing out jump list
+        for (idx, x) in self.jump_list.iter().enumerate() {
+            if (idx as i32) != self.select_focus-1 {
                 println!("{}", x)
             } else {
                 println!("{}", color_bold(RED, &x.to_string()))
             }
-        });
+        }
     }
 }
 
