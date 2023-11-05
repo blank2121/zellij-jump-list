@@ -41,7 +41,7 @@ somewhere inside the [keybinds](https://zellij.dev/documentation/keybindings.htm
 
 ```kdl
 shared_except "locked" {
-    bind "Ctrl j" {
+    bind "Ctrl y" {
         LaunchOrFocusPlugin "file:~/.config/zellij/plugins/zellij-jump-list.wasm" {
             floating true; move_to_focused_tab true;
         }
