@@ -194,9 +194,9 @@ impl ZellijPlugin for State {
         // tui listing out jump list
         for (idx, x) in self.jump_list.iter().enumerate() {
             if (idx as i32) != self.select_focus-1 {
-                println!("{}", x)
+                println!("{}. {}", idx+1, x)
             } else {
-                println!("{}", color_bold(RED, &x.to_string()))
+                println!("{}. {}", idx+1, color_bold(RED, &x.to_string()))
             }
         }
     }

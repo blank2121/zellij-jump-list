@@ -4,7 +4,7 @@ A [Zellij](https://zellij.dev) plugin for navigating your motions from pane-to-p
 
 Inspired by the jump list commonly in editors like vim, nvim, emacs.
 
-![usage](add a link here to and image)
+![usage](./img/working-example.png)
 
 ## Usage
 
