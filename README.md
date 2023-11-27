@@ -27,7 +27,7 @@ Briefly: to quickly go to previous panes.
 
 ```bash
 git clone https://github.com/blank2121/zellij-jump-list.git
-cd harpoon
+cd zellij-jump-list
 ./install.sh
 ```
 > If `install.sh` does not run or does not have the permission to run, run `chmod +x ./install.sh`
