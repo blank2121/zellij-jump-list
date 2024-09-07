@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .cargo/**
+      - src/**
+      - Cargo.lock
+      - Cargo.toml
+      - .github/workflows/ci.yml
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v4
+
+      - name: Get app name
+        id: name
+        run: |
+          echo "name=zellij-jump-list" >> $GITHUB_OUTPUT
+
+      - name: Get app version
+        id: version
+        run: |
+          APP_VERSION=$(git rev-parse --short HEAD)
+          CURRENT_DATE=$(date +'%Y.%m.%d')
+          APP_VERSION_DATE="${CURRENT_DATE}-${APP_VERSION}"
+          echo "version=$APP_VERSION_DATE"
+          echo "version=$APP_VERSION_DATE" >> $GITHUB_OUTPUT
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-wasi
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Generate SHA256 checksum
+        run: sha256sum ./target/wasm32-wasi/release/zellij-jump-list.wasm > ./target/wasm32-wasi/release/zellij-jump-list.wasm.sha256
+
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./target/wasm32-wasi/release/zellij-jump-list.wasm
+            ./target/wasm32-wasi/release/zellij-jump-list.wasm.sha256
+          name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          # Note: drafts and prereleases cannot be set as latest.
+          make_latest: true
+          fail_on_unmatched_files: true
