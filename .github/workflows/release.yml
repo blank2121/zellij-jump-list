@@ -11,6 +11,9 @@ on:
       - Cargo.toml
       - .github/workflows/ci.yml
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
